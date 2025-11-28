@@ -17,6 +17,7 @@ export interface Collaborator {
 export interface CalculationResult {
   sdi: number;
   isSdiManual: boolean;
+  effectiveDailySalary: number; // New field for UI display of calculated Net salary
   antiquityYears: number;
   antiquityDaysTotal: number;
   vacationDaysEntitledCurrentYear: number;
