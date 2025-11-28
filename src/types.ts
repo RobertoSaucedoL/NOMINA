@@ -1,14 +1,15 @@
 export interface Collaborator {
   id: string;
   name: string;
+  monthlyPayrollCost?: number; // Campo principal para captura financiera
   dailySalary: number;
-  manualSdi?: number; // Optional manual override for SDI
+  manualSdi?: number; // Opcional, aunque ahora se calcula auto
   startDate: string;
   endDate: string;
   aguinaldoDays: number;
-  vacationPremiumPkg: number; // Percentage 0-100
+  vacationPremiumPkg: number; // Porcentaje 0-100
   minimumWage: number;
-  vacationDaysTaken: number; // Changed from unpaid to taken
+  vacationDaysTaken: number; // Días disfrutados
   pendingBonuses: number;
   additionalBenefits: string;
 }
@@ -24,11 +25,13 @@ export interface CalculationResult {
   // Breakdown
   unpaidWages: number; 
   proportionalAguinaldo: number;
+  effectiveAguinaldoDays: number;
+  aguinaldoDaysWorked: number;
   
   // Vacations Breakdown
-  totalVacationDaysEarnedHistory: number; // Sum of all years + current proportional
-  netVacationDaysToPay: number; // Earned - Taken
-  proportionalVacation: number; // The Money
+  totalVacationDaysEarnedHistory: number;
+  netVacationDaysToPay: number;
+  proportionalVacation: number;
   
   vacationPremium: number;
   seniorityPremium: number; 
@@ -39,16 +42,17 @@ export interface CalculationResult {
   
   // Totals
   scenario1Total: number;
-  scenario2Total: number; // Full (With 20 days)
-  scenario2TotalWithout20Days: number; // New field
+  scenario2Total: number;
+  scenario2TotalWithout20Days: number;
   scenario3Total: number;
 }
 
 export const DEFAULT_COLLABORATOR: Collaborator = {
   id: '1',
   name: 'Nuevo Colaborador',
+  monthlyPayrollCost: 0,
   dailySalary: 0,
-  manualSdi: undefined,
+  manualSdi: 0,
   startDate: new Date(new Date().setFullYear(new Date().getFullYear() - 1)).toISOString().split('T')[0], // Default 1 year ago
   endDate: new Date().toISOString().split('T')[0],
   aguinaldoDays: 15,

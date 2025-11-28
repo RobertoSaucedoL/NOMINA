@@ -38,8 +38,9 @@ const App: React.FC = () => {
   };
 
   const handleClear = () => {
+    handleUpdateCollaborator(activeId, 'monthlyPayrollCost', 0);
     handleUpdateCollaborator(activeId, 'dailySalary', 0);
-    handleUpdateCollaborator(activeId, 'manualSdi', 0); // Clear manual SDI too
+    handleUpdateCollaborator(activeId, 'manualSdi', 0); 
     handleUpdateCollaborator(activeId, 'vacationDaysTaken', 0);
     handleUpdateCollaborator(activeId, 'pendingBonuses', 0);
     handleUpdateCollaborator(activeId, 'additionalBenefits', '');
@@ -87,7 +88,7 @@ const App: React.FC = () => {
             <InputSection 
                 data={activeCollaborator} 
                 onChange={handleUpdateCollaborator} 
-                onClear={handleClear}
+                onClear={handleClear} 
                 onDelete={handleDeleteCollaborator}
             />
 

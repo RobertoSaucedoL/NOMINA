@@ -55,7 +55,7 @@ const ResultsTable: React.FC<Props> = ({ results }) => {
             <Row 
                 label="Aguinaldo Proporcional" 
                 s1={results.proportionalAguinaldo} s2={results.proportionalAguinaldo} s3={results.proportionalAguinaldo} 
-                subtext="(s/ Salario Base)"
+                subtext={`(Base: ${results.effectiveAguinaldoDays} días/año | Trab: ${results.aguinaldoDaysWorked} días)`}
             />
             
             <Row 

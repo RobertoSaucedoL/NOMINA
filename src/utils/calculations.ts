@@ -30,7 +30,7 @@ export const calculateResults = (data: Collaborator): CalculationResult => {
   if (isNaN(start.getTime()) || isNaN(end.getTime()) || start > end) {
     return {
       sdi: 0, isSdiManual: false, antiquityYears: 0, antiquityDaysTotal: 0, vacationDaysEntitledCurrentYear: 0, daysWorkedSinceAnniversary: 0,
-      unpaidWages: 0, proportionalAguinaldo: 0, 
+      unpaidWages: 0, proportionalAguinaldo: 0, effectiveAguinaldoDays: 15, aguinaldoDaysWorked: 0,
       totalVacationDaysEarnedHistory: 0, netVacationDaysToPay: 0, proportionalVacation: 0,
       vacationPremium: 0, seniorityPremium: 0, indemnification3Months: 0, indemnification20Days: 0, lostWages: 0,
       scenario1Total: 0, scenario2Total: 0, scenario2TotalWithout20Days: 0, scenario3Total: 0
@@ -39,14 +39,15 @@ export const calculateResults = (data: Collaborator): CalculationResult => {
 
   // --- 2. CÁLCULO DE ANTIGÜEDAD ---
   const diffTime = end.getTime() - start.getTime();
-  const antiquityDaysTotal = Math.floor(diffTime / MS_PER_DAY) + 1;
+  const antiquityDaysTotal = Math.floor(diffTime / MS_PER_DAY) + 1; // +1 to include start date
   const antiquityYearsExact = antiquityDaysTotal / 365;
   const completedYears = Math.floor(antiquityYearsExact);
 
   // --- 3. DATOS LEGALES BASE ---
   // LFT: Aguinaldo mínimo 15 días.
-  // Si el usuario pone menos de 15, calculamos con 15 (aunque mostramos warning en UI).
-  const effectiveAguinaldoDays = Math.max(15, data.aguinaldoDays);
+  // Validación robusta: Si viene 0, NaN o <15, se fuerza a 15.
+  const safeAguinaldoInput = (typeof data.aguinaldoDays === 'number' && !isNaN(data.aguinaldoDays)) ? data.aguinaldoDays : 0;
+  const effectiveAguinaldoDays = Math.max(15, safeAguinaldoInput);
   
   // Vacaciones correspondientes al año actual de servicio para Factor de Integración
   const currentCycleEntitlement = getStatutoryVacationDays(completedYears + 1);
@@ -54,7 +55,7 @@ export const calculateResults = (data: Collaborator): CalculationResult => {
 
   // --- 4. CÁLCULO DE SALARIOS (BASE vs SDI) ---
   // Salario Base: Input del usuario.
-  const baseSalary = data.dailySalary;
+  const baseSalary = data.dailySalary || 0;
 
   // SDI (Salario Diario Integrado):
   // Si el usuario lo capturó manualmente, usamos ese.
@@ -80,10 +81,14 @@ export const calculateResults = (data: Collaborator): CalculationResult => {
   const jan1CurrentYear = new Date(Date.UTC(currentYear, 0, 1));
   const aguinaldoStartDate = start > jan1CurrentYear ? start : jan1CurrentYear;
   
-  // 2. Días trabajados en el año calendario
-  const aguinaldoDaysWorked = Math.floor((end.getTime() - aguinaldoStartDate.getTime()) / MS_PER_DAY) + 1;
+  // 2. Días trabajados en el año calendario (Inclusive +1)
+  let aguinaldoDaysWorked = Math.floor((end.getTime() - aguinaldoStartDate.getTime()) / MS_PER_DAY) + 1;
+  // Safety cap: cannot exceed 365 (or 366 in leap)
+  if (aguinaldoDaysWorked > 366) aguinaldoDaysWorked = 365; 
+  if (aguinaldoDaysWorked < 0) aguinaldoDaysWorked = 0;
   
   // 3. Cálculo
+  // Nota: Si trabajó todo el año (365 días), (365/365)*15 = 15 días completos.
   const propAguinaldo = (effectiveAguinaldoDays / 365) * aguinaldoDaysWorked * baseSalary;
 
 
@@ -99,9 +104,11 @@ export const calculateResults = (data: Collaborator): CalculationResult => {
 
   // B) Año Trunco (Proporcional)
   const lastAnniversaryDate = new Date(Date.UTC(start.getUTCFullYear() + completedYears, start.getUTCMonth(), start.getUTCDate()));
-  let daysSinceAnniversary = Math.floor((end.getTime() - lastAnniversaryDate.getTime()) / MS_PER_DAY) + 1;
+  let daysSinceAnniversary = Math.floor((end.getTime() - lastAnniversaryDate.getTime()) / MS_PER_DAY) + 1; // +1 Inclusive
+  
   if (daysSinceAnniversary < 0) daysSinceAnniversary = 0;
-  if (daysSinceAnniversary > 366) daysSinceAnniversary = 365;
+  // Cap at 365 to avoid overflow in leap year logic slightly
+  if (daysSinceAnniversary > 366) daysSinceAnniversary = 365; 
 
   const proportionalDaysCurrentYear = (daysSinceAnniversary / 365) * currentCycleEntitlement;
   totalVacationDaysEarnedHistory += proportionalDaysCurrentYear;
@@ -174,6 +181,8 @@ export const calculateResults = (data: Collaborator): CalculationResult => {
     daysWorkedSinceAnniversary: daysSinceAnniversary,
     unpaidWages: 0,
     proportionalAguinaldo: propAguinaldo,
+    effectiveAguinaldoDays, 
+    aguinaldoDaysWorked,    
     
     totalVacationDaysEarnedHistory,
     netVacationDaysToPay,
