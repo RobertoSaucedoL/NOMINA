@@ -12,33 +12,22 @@ interface Props {
 
 const InputSection: React.FC<Props> = ({ data, onChange, onClear, onDelete }) => {
   
-  // Cálculo temporal para mostrar el SDI estimado en el placeholder/value
-  const tempResults = calculateResults(data);
-  const currentSdi = tempResults.sdi;
-
-  // Factor derivado de tu ejemplo: Costo 33400 / Bruto 25000 = 1.336
-  const FACTOR_COST_TO_GROSS = 1.336;
+  // Obtenemos los resultados calculados "al vuelo" para mostrar los salarios derivados
+  const results = calculateResults(data);
+  const displayedDaily = results.effectiveDailySalary;
+  const displayedSdi = results.sdi;
 
   const handleChange = (field: keyof Collaborator, value: string | number) => {
     let finalValue = value;
     if (typeof value === 'string' && ['monthlyPayrollCost', 'dailySalary', 'manualSdi', 'aguinaldoDays', 'vacationPremiumPkg', 'minimumWage', 'vacationDaysTaken', 'pendingBonuses'].includes(field)) {
        finalValue = value === '' ? 0 : parseFloat(value);
     }
-
-    // Lógica especial para el Costo de Nómina (Dato Maestro)
+    
+    // Si editamos el Costo, limpiamos los manuales para que la lógica de calculateResults tome prioridad
     if (field === 'monthlyPayrollCost') {
-        const cost = typeof finalValue === 'number' ? finalValue : 0;
-        
-        // 1. Calcular Bruto Mensual = Costo / Factor
-        const grossMonthly = cost > 0 ? cost / FACTOR_COST_TO_GROSS : 0;
-        
-        // 2. Calcular Diario = Bruto / 30
-        const newDaily = grossMonthly / 30;
-        
-        onChange(data.id, 'monthlyPayrollCost', cost);
-        onChange(data.id, 'dailySalary', newDaily);
-        // Reseteamos manualSdi para que se recalcule automáticamente con el nuevo diario
-        onChange(data.id, 'manualSdi', 0);
+        onChange(data.id, 'monthlyPayrollCost', finalValue);
+        // Opcional: Podríamos limpiar dailySalary/manualSdi aquí si quisiéramos forzar el modo automático puro,
+        // pero calculateResults ya prioriza monthlyPayrollCost si es > 0.
         return;
     }
 
@@ -102,14 +91,14 @@ const InputSection: React.FC<Props> = ({ data, onChange, onClear, onDelete }) =>
                 />
              </div>
              <p className="text-xs text-gray-500 mt-2">
-                 Ingrese el costo total mensual (incluyendo carga social). El sistema calculará el Salario Diario Base y el SDI automáticamente.
+                 Ingrese el costo total mensual (incluyendo carga social). El sistema calculará el <strong>Salario Neto (Bolsillo)</strong> para finiquito y el <strong>SDI Legal (Bruto)</strong> para indemnizaciones.
              </p>
         </div>
 
         {/* Salarios Calculados (Read Only) */}
         <div>
           <label className="block text-sm font-medium text-gray-500 mb-1 flex items-center gap-1">
-             Salario Diario Base <Lock size={12} className="opacity-50"/>
+             Salario Diario Neto (Estimado) <Lock size={12} className="opacity-50"/>
           </label>
           <div className="relative">
             <span className="absolute left-3 top-3 text-gray-400">$</span>
@@ -117,17 +106,17 @@ const InputSection: React.FC<Props> = ({ data, onChange, onClear, onDelete }) =>
               type="number"
               disabled
               className="w-full pl-8 p-3 bg-gray-100 border border-gray-200 rounded-lg text-gray-500 font-medium cursor-not-allowed"
-              value={data.dailySalary ? Number(data.dailySalary.toFixed(2)) : ''}
+              value={displayedDaily ? Number(displayedDaily.toFixed(2)) : ''}
               placeholder="0.00"
             />
           </div>
-          <p className="text-[10px] text-gray-400 mt-1">Calculado (Costo ÷ 1.336 ÷ 30)</p>
+          <p className="text-[10px] text-gray-400 mt-1">Base para Vacaciones y Aguinaldo (Factor 1.61)</p>
         </div>
 
         <div>
             <div className="flex items-center gap-1 mb-1">
                 <label className="block text-sm font-medium text-gray-500 flex items-center gap-1">
-                    SDI Calculado <Lock size={12} className="opacity-50"/>
+                    SDI Legal (Bruto Integrado) <Lock size={12} className="opacity-50"/>
                 </label>
             </div>
             <div className="relative">
@@ -136,11 +125,11 @@ const InputSection: React.FC<Props> = ({ data, onChange, onClear, onDelete }) =>
                     type="text"
                     disabled
                     className="w-full pl-8 p-3 bg-gray-100 border border-gray-200 rounded-lg text-gray-500 font-medium cursor-not-allowed"
-                    value={formatCurrency(currentSdi).replace('$', '')}
+                    value={formatCurrency(displayedSdi).replace('$', '')}
                 />
             </div>
              <p className="text-[10px] text-gray-400 mt-1">
-                Base + Factor Integración Prestaciones
+                Base para Indemnizaciones (Factor Costo 1.33 + Integración)
             </p>
         </div>
 
